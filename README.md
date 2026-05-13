@@ -1,6 +1,6 @@
 # notejs
 
-A lightweight, serverless note-taking web app written in TypeScript. Create, edit, and share notes with auto-save. Deploys on Cloudflare Workers (native KV) or Vercel Edge (Vercel KV). No JS frameworks, no build step, zero dependencies — pure vanilla HTML/CSS/JS.
+A lightweight, serverless note-taking web app written in TypeScript. Create, edit, and share notes with auto-save. Deploys on Cloudflare Workers (native KV) or Vercel Edge (Upstash Redis). No JS frameworks, no build step, zero dependencies — pure vanilla HTML/CSS/JS.
 
 ## Features
 
@@ -17,7 +17,7 @@ A lightweight, serverless note-taking web app written in TypeScript. Create, edi
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24+
 
 ### Local Development
 
@@ -64,20 +64,20 @@ Your app is live at `https://your-app.your-account.workers.dev` with persistent 
 
 ## Deploy to Vercel Edge
 
-**Storage**: Vercel KV (Upstash Redis) — persistent with 7-day TTL.
+**Storage**: Upstash Redis — persistent with 7-day TTL.
 
-### Step 1: Provision Vercel KV
+### Step 1: Create Upstash Redis (or Vercel KV)
 
-Via CLI (recommended):
+Create a Redis database at [upstash.com](https://upstash.com) (free tier). Copy the `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the REST API section.
+
+Alternatively, create via Vercel Dashboard: Storage → Create → Redis. This auto-injects the env vars.
+
+### Step 2: Set environment variables
+
 ```bash
-npx vercel install upstash/upstash-kv -m primaryRegion=sfo1
+npx vercel env add KV_REST_API_URL production --value <your-url>
+npx vercel env add KV_REST_API_TOKEN production --value <your-token>
 ```
-
-Or via the Vercel dashboard: Storage → Create → Vercel KV.
-
-Either way auto-populates `KV_REST_API_URL` and `KV_REST_API_TOKEN` as environment variables.
-
-### Step 2: Push to GitHub and import in Vercel
 
 ### Step 3: Deploy
 
@@ -85,7 +85,7 @@ Either way auto-populates `KV_REST_API_URL` and `KV_REST_API_TOKEN` as environme
 npx vercel --prod
 ```
 
-`vercel.json` routes all requests to `src/vercel.ts` as an Edge Function. The app uses `VercelKVStorage` which connects to Vercel KV via its REST API.
+`vercel.json` builds `src/vercel.ts` as an Edge Function and routes all requests to it. The app uses `VercelKVStorage` which connects to Upstash Redis via its REST API.
 
 Your app is live at `https://your-app.vercel.app` with persistent KV storage.
 
@@ -110,9 +110,15 @@ Manual trigger (`workflow_dispatch`) — typecheck → deploy to Cloudflare Work
 
 Manual trigger (`workflow_dispatch`) — typecheck → deploy to Vercel Edge.
 
-**Required secret:** `VERCEL_TOKEN` — Vercel access token (create in Vercel Dashboard → Settings → Tokens).
+**Required secrets:**
 
-**To set up secrets:** Go to your GitHub repo → Settings → Secrets and variables → Actions, then add each token. Run workflows via Actions tab → select workflow → Run workflow.
+| Secret | Description |
+|---|---|
+| `VERCEL_TOKEN` | Vercel access token (create in Vercel Dashboard → Settings → Tokens) |
+| `VERCEL_ORG_ID` | Your Vercel team/org ID (from `.vercel/project.json`) |
+| `VERCEL_PROJECT_ID` | Your Vercel project ID (from `.vercel/project.json`) |
+
+**To set up secrets:** Go to your GitHub repo → Settings → Secrets and variables → Actions, then add each value. Run workflows via Actions tab → select workflow → Run workflow.
 
 ## API
 
@@ -186,6 +192,8 @@ curl -X POST https://your-app.com/ \
 │       └── types.ts        # TypeScript type definitions
 ├── wrangler.toml           # Cloudflare Workers configuration
 ├── vercel.json             # Vercel deployment configuration
+├── .vercelignore           # Files excluded from Vercel deployment
+├── .github/workflows/      # GitHub Actions CI/CD workflows
 ├── package.json            # Dependencies and scripts
 ├── tsconfig.json           # TypeScript configuration
 └── README.md               # This file
@@ -208,9 +216,7 @@ Note IDs use a WORDnn format — a random dictionary word (3–5 uppercase lette
 
 ### Storage
 
-Both platforms use persistent KV storage with 7-day TTL. Cloudflare Workers uses native **Workers KV** via `env.KV`. Vercel Edge uses **Vercel KV** (Upstash Redis) via REST API. Both implement the same `Storage` interface.
-
-TTL is 7 days by default.
+Both platforms use persistent KV storage with 7-day TTL. Cloudflare Workers uses native **Workers KV** via `env.KV`. Vercel Edge uses **Upstash Redis** via REST API (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). Both implement the same `Storage` interface.
 
 ## Testing
 
