@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "build": {
+    "command": "npx tsc --noEmit"
+  },
+  "routes": [
+    { "src": "/favicon.ico", "dest": "src/vercel.ts" },
+    { "src": "/noteid/(.*)", "dest": "src/vercel.ts" },
+    { "src": "/(.*)", "dest": "src/vercel.ts" }
+  ],
+  "regions": ["auto"]
+}

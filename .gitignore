@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Cloudflare Workers
+.wrangler/
+
+# Build output
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.dev.vars
+
+# Editor/IDE
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.cache/
+
+# Coverage
+coverage/
+
+# OS files
+Thumbs.db
+
