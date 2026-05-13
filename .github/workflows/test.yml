@@ -2,9 +2,10 @@ name: Test
 
 on:
   push:
-    branches: [feature/typescript]
+    branches: [main]
   pull_request:
-    branches: [feature/typescript]
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
