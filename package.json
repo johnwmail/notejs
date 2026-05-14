@@ -12,11 +12,18 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260511.1",
     "@types/node": "^25.7.0",
-    "@vercel/node": "^5.8.0",
+    "@vercel/node": "^5.8.1",
     "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6",
-    "wrangler": "^4.90.0"
+    "wrangler": "^4.90.1"
+  },
+  "overrides": {
+    "minimatch": "10.2.3",
+    "path-to-regexp": "6.3.0",
+    "undici": "6.25.0",
+    "smol-toml": "1.6.1",
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": ">=24.0.0"
