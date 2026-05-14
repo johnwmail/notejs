@@ -26,6 +26,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Set KV namespace ID
+        run: sed -i 's/^id = "local-dev"/id = "${{ secrets.CLOUDFLARE_KV_ID }}"/' wrangler.toml
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
