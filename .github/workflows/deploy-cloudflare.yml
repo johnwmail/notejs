@@ -3,6 +3,9 @@ name: Deploy Cloudflare
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
