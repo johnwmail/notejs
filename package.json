@@ -15,7 +15,7 @@
     "@vercel/node": "^5.8.1",
     "happy-dom": "^20.9.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.11",
     "wrangler": "^4.90.1"
   },
   "overrides": {
