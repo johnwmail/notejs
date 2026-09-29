@@ -5,6 +5,13 @@ const deploymentUrl = process.env.VERCEL_PREVIEW_URL;
 if (!deploymentUrl) {
   throw new Error("VERCEL_PREVIEW_URL is required");
 }
+const protectionBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+if (!protectionBypassSecret) {
+  console.log(
+    "Skipping protected-note curl smoke test: VERCEL_AUTOMATION_BYPASS_SECRET is not configured."
+  );
+  process.exit(0);
+}
 
 const validIdCharacters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const suffix = Array.from(randomBytes(16), (byte) =>
@@ -24,6 +31,8 @@ function vercelCurl(path, args) {
       path,
       "--deployment",
       deploymentUrl,
+      "--protection-bypass",
+      protectionBypassSecret,
       "--",
       "--silent",
       "--show-error",

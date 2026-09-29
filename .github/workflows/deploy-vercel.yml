@@ -69,6 +69,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           VERCEL_PREVIEW_URL: ${{ steps.deploy-preview.outputs.url }}
         run: node scripts/smoke-vercel-preview.mjs
       - name: Deploy Vercel Production

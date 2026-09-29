@@ -118,7 +118,7 @@ Pushing a `v*` tag (for example, `v0.3.1`) deploys to the production Worker. Man
 
 ### Deploy Vercel (`deploy-vercel.yml`)
 
-Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview` and runs a protected-note smoke test using `vercel curl`. Preview reads the `KV_REST_API_URL` and `KV_REST_API_TOKEN` values configured in the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
+Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview`. When the GitHub Actions secret `VERCEL_AUTOMATION_BYPASS_SECRET` is configured, the workflow uses `vercel curl` to smoke-test password-protected note creation, read-once, and burn behavior. Preview reads `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
 
 **Required secrets:**
 
@@ -127,6 +127,7 @@ Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` depl
 | `VERCEL_TOKEN` | Vercel access token (create in Vercel Dashboard → Settings → Tokens) |
 | `VERCEL_ORG_ID` | Your Vercel team/org ID (from `.vercel/project.json`) |
 | `VERCEL_PROJECT_ID` | Your Vercel project ID (from `.vercel/project.json`) |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel deployment protection automation bypass secret for Preview smoke tests |
 
 **To set up secrets:** Go to your GitHub repo → Settings → Secrets and variables → Actions, then add each value. Run workflows via Actions tab → select workflow → Run workflow.
 
