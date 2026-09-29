@@ -1,4 +1,5 @@
 const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60;
+const VERCEL_VALUE_FORMAT = "notejs-vercel-value-v1";
 
 interface KVBinding {
   get(key: string): Promise<string | null>;
@@ -66,14 +67,35 @@ export class VercelKVStorage implements Storage {
 
   async read(noteID: string): Promise<string> {
     const data = await this.request("GET", `/get/${noteID}`);
-    return (data.result as string | null) ?? "";
+    const storedValue = data.result;
+    if (typeof storedValue !== "string") return "";
+
+    // Earlier writes JSON-stringified the note before sending it to Upstash.
+    // Unwrap those values while also supporting the versioned storage envelope.
+    try {
+      const decoded: unknown = JSON.parse(storedValue);
+      if (typeof decoded === "string") return decoded;
+      if (
+        decoded &&
+        typeof decoded === "object" &&
+        "format" in decoded &&
+        decoded.format === VERCEL_VALUE_FORMAT &&
+        "value" in decoded &&
+        typeof decoded.value === "string"
+      ) {
+        return decoded.value;
+      }
+    } catch {
+      // Plain-text notes are not JSON and should be returned as-is.
+    }
+    return storedValue;
   }
 
   async write(noteID: string, content: string): Promise<void> {
     await this.request(
       "POST",
       `/set/${noteID}?EX=${DEFAULT_TTL_SECONDS}`,
-      JSON.stringify(content)
+      JSON.stringify({ format: VERCEL_VALUE_FORMAT, value: content })
     );
   }
 

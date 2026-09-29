@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { KVStorage, VercelKVStorage } from "./storage";
 import type { Storage } from "./storage";
+import { parseProtectedNoteRecord } from "./crypto";
 
 describe("KVStorage", () => {
   let storage: Storage;
@@ -78,6 +79,45 @@ describe("VercelKVStorage", () => {
     expect(await storage.read("ACE23")).toBe("");
   });
 
+  it("unwraps values written by the previous JSON-stringifying adapter", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ result: JSON.stringify("legacy note") }))
+    );
+    expect(await storage.read("ACE23")).toBe("legacy note");
+  });
+
+  it("restores legacy protected records that were double-serialized", async () => {
+    const protectedValue = JSON.stringify({
+      format: "notejs-protected-note",
+      version: 1,
+      state: "active",
+      iterations: 310_000,
+      salt: "AQ==",
+      verifier: "Ag==",
+      iv: "Aw==",
+      ciphertext: "BA==",
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ result: JSON.stringify(protectedValue) }))
+    );
+
+    const result = await storage.read("ACE23");
+    expect(result).toBe(protectedValue);
+    expect(parseProtectedNoteRecord(result)?.state).toBe("active");
+  });
+
+  it("reads versioned note values from Redis", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({
+        result: JSON.stringify({
+          format: "notejs-vercel-value-v1",
+          value: "stored note",
+        }),
+      }))
+    );
+    expect(await storage.read("ACE23")).toBe("stored note");
+  });
+
   it("writes a note with TTL", async () => {
     const mockFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ result: "OK" }))
@@ -87,9 +127,34 @@ describe("VercelKVStorage", () => {
       "https://example.com/set/ACE23?EX=604800",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify("hello"),
+        body: JSON.stringify({ format: "notejs-vercel-value-v1", value: "hello" }),
       })
     );
+  });
+
+  it("round-trips serialized protected notes without double encoding", async () => {
+    let redisValue = "";
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/set/")) {
+        redisValue = String(init?.body);
+        return new Response(JSON.stringify({ result: "OK" }));
+      }
+      return new Response(JSON.stringify({ result: redisValue }));
+    });
+
+    const protectedRecord = JSON.stringify({
+      format: "notejs-protected-note",
+      version: 1,
+      state: "active",
+      ciphertext: "ciphertext",
+    });
+    await storage.write("ACE23", protectedRecord);
+
+    expect(redisValue).toBe(
+      JSON.stringify({ format: "notejs-vercel-value-v1", value: protectedRecord })
+    );
+    expect(await storage.read("ACE23")).toBe(protectedRecord);
   });
 
   it("deletes a note", async () => {
