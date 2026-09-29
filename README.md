@@ -8,7 +8,7 @@ A lightweight, serverless note-taking web app written in TypeScript. Create, edi
 - **Auto-Save**: Automatically saves note content every second
 - **Shareable URLs**: Notes accessible via direct links with human-friendly WORDnn IDs
 - **Password-Protected Notes**: Optional per-note password encryption; a protected note is deleted after its first successful read
-- **CLI Help and Version**: `curl` on the app root prints usage examples and the build version; the browser header displays the same version
+- **CLI Help and Version**: `curl` on the app root prints usage examples and the build version; the browser header displays the same version as a link to the GitHub repository
 - **Favicon**: `/favicon.ico` serves the app icon
 - **Multi-Deployment**: Cloudflare Workers or Vercel Edge
 - **Zero Dependencies**: No npm runtime deps — KV via native bindings (Cloudflare) or REST fetch (Vercel)
@@ -105,13 +105,20 @@ Runs on every push/PR to `main`:
 
 ### Deploy Cloudflare (`deploy-cloudflare.yml`)
 
-Runs on a pushed version tag matching `v*` (for example, `v1.0.1`) or manually via `workflow_dispatch`. It runs typecheck and tests before deploying to Cloudflare Workers. Tag deployments show that tag as the app version; manual deployments show the short SHA of the deployed commit.
+Pushing a `v*` tag (for example, `v0.3.1`) deploys to the production Worker. Manual `workflow_dispatch` runs `wrangler preview --name staging --ignore-base-config` and produces a Cloudflare Preview URL without updating production. Preview uses a separate KV namespace. Both paths run typecheck and tests first; tag builds show the tag as the app version, while manual builds show the short commit SHA.
 
-**Required secret:** `CF_API_TOKEN` — Cloudflare API token with Workers permissions (create in Cloudflare Dashboard → My Profile → API Tokens, template: "Edit Cloudflare Workers").
+**Required GitHub Actions secrets:**
+
+| Secret | Description |
+|---|---|
+| `CF_API_TOKEN` | Cloudflare API token with Workers permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `CLOUDFLARE_KV_ID` | Production KV namespace ID |
+| `CLOUDFLARE_PREVIEW_KV_ID` | Separate KV namespace ID for Worker Previews |
 
 ### Deploy Vercel (`deploy-vercel.yml`)
 
-Runs on a pushed version tag matching `v*` (for example, `v1.0.1`) or manually via `workflow_dispatch`. It runs typecheck and tests before deploying to Vercel Edge. Tag deployments show that tag as the app version; manual deployments show the short SHA of the deployed commit. Pushing a matching tag triggers both Cloudflare and Vercel deployments.
+Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview` and returns a Vercel Preview URL. Preview reads the `KV_REST_API_URL` and `KV_REST_API_TOKEN` values configured in the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
 
 **Required secrets:**
 

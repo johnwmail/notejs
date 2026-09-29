@@ -29,7 +29,7 @@ export function renderHTML(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/favicon.ico" type="image/gif">
-    <title>Note</title>
+    <title>Notejs</title>
     <style>
         *, *::before, *::after {
             margin: 0;
@@ -105,6 +105,8 @@ export function renderHTML(
         }
 
         .version-badge {
+            display: inline-flex;
+            align-items: center;
             font-size: 11px;
             color: var(--text-muted);
             font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
@@ -113,6 +115,12 @@ export function renderHTML(
             padding: 2px 6px;
             border-radius: 999px;
             white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .version-badge:hover {
+            color: var(--blue-600);
+            border-color: var(--blue-600);
         }
 
         .note-id {
@@ -474,8 +482,8 @@ export function renderHTML(
     <div class="container" id="editorApp" style="display:${editorDisplay}">
         <div class="header">
             <div class="header-left">
-                <h1><span class="logo-icon">✎</span> Note</h1>
-                <span class="version-badge">${escapeHTMLServer(APP_VERSION)}</span>
+                <h1><span class="logo-icon">✎</span> Notejs</h1>
+                <a class="version-badge" href="https://github.com/johnwmail/notejs" target="_blank" rel="noopener noreferrer" title="View Notejs on GitHub">${escapeHTMLServer(APP_VERSION)}</a>
                 <span class="note-id" id="noteInfo">${escapedNoteID}</span>
             </div>
             <div class="controls">

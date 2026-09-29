@@ -10,3 +10,10 @@ preview_id = "local-dev"
 
 [vars]
 TTL = "604800"
+
+[previews.vars]
+TTL = "604800"
+
+[[previews.kv_namespaces]]
+binding = "KV"
+id = "00000000000000000000000000000000"

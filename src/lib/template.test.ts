@@ -16,7 +16,9 @@ describe("renderHTML", () => {
 
   it("shows the app version and links to the favicon", () => {
     const html = renderHTML("", "");
-    expect(html).toContain(`class="version-badge">${APP_VERSION}</span>`);
+    expect(html).toContain(`class="version-badge" href="https://github.com/johnwmail/notejs"`);
+    expect(html).toContain(`>${APP_VERSION}</a>`);
+    expect(html).toContain("Notejs");
     expect(html).toContain('<link rel="icon" href="/favicon.ico" type="image/gif">');
   });
 

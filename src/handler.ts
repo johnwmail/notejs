@@ -107,7 +107,7 @@ function textResponse(text: string, status: number = 200): Response {
 
 function renderCurlHelp(baseURL: string): string {
   return [
-    "Note - Lightweight note-taking app",
+    "Notejs - Lightweight note-taking app",
     `Version: ${APP_VERSION}`,
     "",
     "Usage Examples:",

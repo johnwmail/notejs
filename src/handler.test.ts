@@ -51,6 +51,7 @@ describe("handleRequest", () => {
 
       expect(res.headers.get("Content-Type")).toContain("text/plain");
       const text = await res.text();
+      expect(text).toContain("Notejs - Lightweight note-taking app");
       expect(text).toContain(`Version: ${APP_VERSION}`);
       expect(text).toContain("Usage Examples:");
       expect(text).toContain("--data-binary @/path/to/file.txt");
