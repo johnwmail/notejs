@@ -91,7 +91,7 @@ describe("VercelKVStorage", () => {
       format: "notejs-protected-note",
       version: 1,
       state: "active",
-      iterations: 310_000,
+      iterations: 100_000,
       salt: "AQ==",
       verifier: "Ag==",
       iv: "Aw==",

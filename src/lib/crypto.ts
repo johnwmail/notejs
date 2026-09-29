@@ -1,6 +1,8 @@
 const FORMAT = "notejs-protected-note";
 const VERSION = 1;
-const PBKDF2_ITERATIONS = 310_000;
+// Cloudflare Workers WebCrypto caps PBKDF2 at 100,000 iterations,
+// so both Cloudflare and Vercel use this value.
+const PBKDF2_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const DERIVED_BYTES = 64;
