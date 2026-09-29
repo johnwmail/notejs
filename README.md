@@ -7,6 +7,9 @@ A lightweight, serverless note-taking web app written in TypeScript. Create, edi
 - **Simple Note Editor**: Lightweight web interface for creating and editing notes
 - **Auto-Save**: Automatically saves note content every second
 - **Shareable URLs**: Notes accessible via direct links with human-friendly WORDnn IDs
+- **Password-Protected Notes**: Optional per-note password encryption; a protected note is deleted after its first successful read
+- **CLI Help and Version**: `curl` on the app root prints usage examples and the build version; the browser header displays the same version
+- **Favicon**: `/favicon.ico` serves the app icon
 - **Multi-Deployment**: Cloudflare Workers or Vercel Edge
 - **Zero Dependencies**: No npm runtime deps — KV via native bindings (Cloudflare) or REST fetch (Vercel)
 - **XSS Protection**: User content is HTML-escaped
@@ -93,22 +96,22 @@ Your app is live at `https://your-app.vercel.app` with persistent KV storage.
 
 ## CI/CD (GitHub Actions)
 
-The repository includes two workflows:
+The repository includes test and deployment workflows:
 
 ### Test (`test.yml`)
 
-Runs on every push/PR to `feature/typescript`:
+Runs on every push/PR to `main`:
 - `npm ci` → `tsc --noEmit` → `npm test`
 
 ### Deploy Cloudflare (`deploy-cloudflare.yml`)
 
-Manual trigger (`workflow_dispatch`) — typecheck → deploy to Cloudflare Workers.
+Runs on a pushed version tag matching `v*` (for example, `v1.0.1`) or manually via `workflow_dispatch`. It runs typecheck and tests before deploying to Cloudflare Workers. Tag deployments show that tag as the app version; manual deployments show the short SHA of the deployed commit.
 
 **Required secret:** `CF_API_TOKEN` — Cloudflare API token with Workers permissions (create in Cloudflare Dashboard → My Profile → API Tokens, template: "Edit Cloudflare Workers").
 
 ### Deploy Vercel (`deploy-vercel.yml`)
 
-Manual trigger (`workflow_dispatch`) — typecheck → deploy to Vercel Edge.
+Runs on a pushed version tag matching `v*` (for example, `v1.0.1`) or manually via `workflow_dispatch`. It runs typecheck and tests before deploying to Vercel Edge. Tag deployments show that tag as the app version; manual deployments show the short SHA of the deployed commit. Pushing a matching tag triggers both Cloudflare and Vercel deployments.
 
 **Required secrets:**
 
@@ -134,6 +137,16 @@ Retrieve and display a note.
 - Backwards compatibility: `/?note={noteId}` still works.
 - Links use the request host or `x-forwarded-*` headers for reverse proxy support.
 - Requests with `User-Agent` containing "curl" return plain text instead of HTML.
+- Running `curl https://your-app.com/` prints terminal usage examples for text, files, and password-protected notes. Browser requests to `/` still show the note editor.
+- The CLI help and browser badge use the build version; `/favicon.ico` serves the GIF favicon.
+- Unprotected notes retain the existing behavior. A protected note shows a password prompt in a browser and does not return content before successful verification.
+- A protected note can be read once with the correct password. Its encrypted content is removed after successful decryption; a later reload reports that it has already been read.
+- `HEAD` requests and incorrect passwords do not consume a protected note.
+- CLI clients can provide the note-specific password in the `X-Note-Password` header. A successful `curl` GET returns plaintext and consumes the note:
+
+  ```bash
+  curl -H "X-Note-Password: $NOTE_PASSWORD" https://your-app.com/noteid/BLAST47
+  ```
 
 ### POST /
 
@@ -143,7 +156,19 @@ Save or delete a note.
 ```json
 {
   "noteId": "BLAST47",
-  "content": "Note content here"
+  "content": "Note content here",
+  "password": "optional password for a newly created protected note"
+}
+```
+
+For an existing protected note, `password` must be its current password. `newPassword` is optional and rotates the password while saving content:
+
+```json
+{
+  "noteId": "BLAST47",
+  "content": "Updated note content",
+  "password": "current note password",
+  "newPassword": "optional replacement password"
 }
 ```
 
@@ -159,6 +184,10 @@ Save or delete a note.
 - If `noteId` is empty, a random WORDnn ID is generated (e.g., "BLAST47")
 - If `content` is empty or whitespace-only, the note is deleted
 - Otherwise, the note is saved
+- Supplying a `password` in JSON or `X-Note-Password` header when creating a note enables password protection and automatically enables burn-after-read. Passwords must be at least 8 characters.
+- Password protection can only be selected when creating the note. It cannot be added to an existing unprotected note or removed from a protected note.
+- Updating a protected note requires its current password. If `newPassword` is omitted, the current password is retained. Updating after a read republishes the note under the same ID, making it unread again.
+- Browser unlock uses a JSON `POST` with `action: "unlock"`, `noteId`, and `password`; the response contains plaintext only after successful password verification.
 
 **Examples:**
 ```bash
@@ -173,6 +202,15 @@ curl -X POST https://your-app.com/ \
   -H "User-Agent: curl/8.0" \
   -d '{"content":"Hello World"}'
 # → https://your-app.com/noteid/BLAST47
+
+# Create a password-protected note (use a strong, unique passphrase)
+echo "Secret note" | curl -sL --data-binary @- \
+  -H "X-Note-Password: $NOTE_PASSWORD" \
+  https://your-app.com/
+
+# Read the protected note once; a successful request burns it
+curl -H "X-Note-Password: $NOTE_PASSWORD" \
+  https://your-app.com/noteid/BLAST47
 ```
 
 ## Project Structure
@@ -186,6 +224,9 @@ curl -X POST https://your-app.com/ \
 │   ├── handler.test.ts     # Handler unit tests
 │   └── lib/
 │       ├── template.ts     # Full HTML/CSS/JS UI template
+│       ├── version.ts      # Shared package version
+│       ├── crypto.ts       # Per-note password derivation and AES-GCM encryption
+│       ├── crypto.test.ts  # Protected-note cryptography tests
 │       ├── storage.ts      # Storage interface + KV / Vercel KV backends
 │       ├── storage.test.ts # Storage unit tests
 │       ├── utils.ts        # Note ID generation/validation, HTML escaping, ClientIP
@@ -229,6 +270,10 @@ npm run typecheck  # TypeScript type checking
 
 - Input validation: Note IDs restricted to `[A-HJ-NP-Z2-9]{3,32}`
 - XSS protection: User content server-side HTML-escaped before rendering
+- Password-protected note content is encrypted with AES-GCM using a per-note key derived with PBKDF2-SHA-256 and a random salt; passwords are not stored in plaintext.
+- A protected note is single-read. After successful unlock, the ciphertext is removed; a short-lived verifier tombstone remains so authenticated edits can republish the same note ID until its seven-day expiry.
+- The server receives the password and decrypts the note to serve browser and CLI clients. This protects stored KV values from a KV-only data leak, but is not end-to-end encryption; the running application can access plaintext.
+- Passwords are unrecoverable. Use a long, unique passphrase; a KV dump allows offline password guesses against the verifier.
 - No third-party frontend dependencies
 
 ## License

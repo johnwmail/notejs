@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderHTML } from "./template";
+import { APP_VERSION } from "./version";
 
 describe("renderHTML", () => {
   it("returns a non-empty string", () => {
@@ -11,6 +12,12 @@ describe("renderHTML", () => {
   it("is valid HTML5 with doctype", () => {
     const html = renderHTML("", "");
     expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
+  });
+
+  it("shows the app version and links to the favicon", () => {
+    const html = renderHTML("", "");
+    expect(html).toContain(`class="version-badge">${APP_VERSION}</span>`);
+    expect(html).toContain('<link rel="icon" href="/favicon.ico" type="image/gif">');
   });
 
   it("includes note ID in the page", () => {
@@ -75,6 +82,38 @@ describe("renderHTML", () => {
   it("handles empty note ID gracefully", () => {
     const html = renderHTML("", "");
     expect(html).toContain("noteInfo");
+  });
+
+  it("offers password protection when creating a new note", () => {
+    const html = renderHTML("", "");
+    expect(html).toContain("Password protect (burn after read)");
+    expect(html).toContain("Choose protection before the first save.");
+  });
+
+  it("does not include protected note content in the locked page", () => {
+    const html = renderHTML("ACE23", "secret content", {
+      passwordProtected: true,
+      locked: true,
+    });
+    expect(html).toContain("Password protected note");
+    expect(html).toContain("unlockForm");
+    expect(html).not.toContain("secret content");
+  });
+
+  it("offers an optional password change after unlocking", () => {
+    const html = renderHTML("ACE23", "content", { passwordProtected: true });
+    expect(html).toContain("Change password (optional)");
+    expect(html).toContain("Leave blank to keep current password");
+  });
+
+  it("renders syntactically valid client JavaScript", () => {
+    const html = renderHTML("ACE23", "content", {
+      passwordProtected: true,
+      locked: true,
+    });
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    expect(() => new Function(script!)).not.toThrow();
   });
 
   it("handles special characters in content", () => {

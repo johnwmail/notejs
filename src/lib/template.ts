@@ -1,15 +1,34 @@
 import { escapeHTMLServer } from "./utils";
+import { APP_VERSION } from "./version";
 
-export function renderHTML(noteID: string, content: string): string {
+export interface RenderOptions {
+  passwordProtected?: boolean;
+  locked?: boolean;
+  consumed?: boolean;
+  showPasswordSetup?: boolean;
+}
+
+export function renderHTML(
+  noteID: string,
+  content: string,
+  options: RenderOptions = {}
+): string {
   const escapedNoteID = escapeHTMLServer(noteID);
-  const escapedContent = escapeHTMLServer(content);
+  const passwordProtected = Boolean(options.passwordProtected);
+  const locked = Boolean(options.locked);
+  const consumed = Boolean(options.consumed);
+  const visibleContent = locked || consumed ? "" : content;
+  const escapedContent = escapeHTMLServer(visibleContent);
+  const showPasswordSetup = options.showPasswordSetup ?? !noteID;
+  const editorDisplay = locked || consumed ? "none" : "flex";
+  const gateDisplay = locked || consumed ? "flex" : "none";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/favicon.ico" type="image/gif">
     <title>Note</title>
     <style>
         *, *::before, *::after {
@@ -83,6 +102,17 @@ export function renderHTML(noteID: string, content: string): string {
 
         .header h1 .logo-icon {
             color: var(--blue-600);
+        }
+
+        .version-badge {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+            border: 1px solid var(--border);
+            background: var(--white);
+            padding: 2px 6px;
+            border-radius: 999px;
+            white-space: nowrap;
         }
 
         .note-id {
@@ -162,6 +192,76 @@ export function renderHTML(noteID: string, content: string): string {
             display: flex;
             padding: 12px;
             min-height: 0;
+        }
+
+        .security-options {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .security-options label {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .security-options input[type="password"] {
+            max-width: 260px;
+            padding: 7px 9px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        .gate {
+            min-height: 100vh;
+            min-height: 100dvh;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: var(--surface);
+        }
+
+        .gate-card {
+            width: min(100%, 420px);
+            padding: 28px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: var(--white);
+            box-shadow: var(--shadow-md);
+        }
+
+        .gate-card h1 {
+            margin-bottom: 8px;
+            font-size: 22px;
+        }
+
+        .gate-card p {
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .gate-card input {
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 11px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font: inherit;
+        }
+
+        .gate-error {
+            min-height: 1.25em;
+            margin-top: 10px;
+            color: var(--red-500);
+            font-size: 13px;
         }
 
         textarea {
@@ -270,6 +370,10 @@ export function renderHTML(noteID: string, content: string): string {
                 font-size: 17px;
             }
 
+            .version-badge {
+                display: none;
+            }
+
             .note-id {
                 display: none;
             }
@@ -315,6 +419,10 @@ export function renderHTML(noteID: string, content: string): string {
                 padding: 8px;
             }
 
+            .security-options {
+                padding: 8px 14px;
+            }
+
             textarea {
                 padding: 14px;
                 font-size: 15px;
@@ -351,10 +459,23 @@ export function renderHTML(noteID: string, content: string): string {
     </style>
 </head>
 <body>
-    <div class="container">
+    <main class="gate" id="passwordGate" style="display:${gateDisplay}">
+        <section class="gate-card">
+            <h1>${consumed ? "Note already read" : "Password protected note"}</h1>
+            <p id="gateDescription">${consumed ? "This note has already been read or has expired." : "Enter the note password to read it. The note will be deleted after it is unlocked."}</p>
+            <form id="unlockForm" style="display:${locked ? "block" : "none"}">
+                <input id="unlockPassword" type="password" autocomplete="current-password" placeholder="Note password" minlength="8" required>
+                <button class="btn btn-primary" type="submit">Unlock note</button>
+                <div class="gate-error" id="unlockError" role="alert"></div>
+            </form>
+        </section>
+    </main>
+
+    <div class="container" id="editorApp" style="display:${editorDisplay}">
         <div class="header">
             <div class="header-left">
                 <h1><span class="logo-icon">✎</span> Note</h1>
+                <span class="version-badge">${escapeHTMLServer(APP_VERSION)}</span>
                 <span class="note-id" id="noteInfo">${escapedNoteID}</span>
             </div>
             <div class="controls">
@@ -377,6 +498,18 @@ export function renderHTML(noteID: string, content: string): string {
             </div>
         </div>
 
+        <div class="security-options" id="passwordSetup" style="display:${showPasswordSetup ? "flex" : "none"}">
+            <label><input id="protectNote" type="checkbox"> Password protect (burn after read)</label>
+            <input id="createPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Choose a password (8+ characters)" style="display:none">
+            <span>Choose protection before the first save.</span>
+        </div>
+
+        <div class="security-options" id="changePasswordPanel" style="display:none">
+            <label for="newPassword">Change password (optional)</label>
+            <input id="newPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Leave blank to keep current password">
+            <span>A changed note becomes unread again.</span>
+        </div>
+
         <div class="editor-wrap">
             <textarea id="content" placeholder="Start typing your note...">${escapedContent}</textarea>
         </div>
@@ -396,14 +529,26 @@ export function renderHTML(noteID: string, content: string): string {
     <script>
         const basePath = window.location.pathname.replace(/\\/noteid\\/.*$/, '');
         const appBase = basePath.endsWith('/') ? basePath : basePath + '/';
-        let lastSaved = ${JSON.stringify(content)};
+        let lastSaved = ${JSON.stringify(visibleContent)};
         let currentNoteId = ${JSON.stringify(noteID)};
+        let protectedNote = ${JSON.stringify(passwordProtected)};
+        let currentPassword = '';
         const textarea = document.getElementById("content");
         const statusText = document.getElementById("statusText");
         const statusDot = document.getElementById("statusDot");
         const charCountEl = document.getElementById("charCount");
         const printableEl = document.getElementById("printable");
         const toastEl = document.getElementById("toast");
+        const protectCheckbox = document.getElementById("protectNote");
+        const createPasswordInput = document.getElementById("createPassword");
+        const passwordSetup = document.getElementById("passwordSetup");
+        const changePasswordPanel = document.getElementById("changePasswordPanel");
+        const newPasswordInput = document.getElementById("newPassword");
+        const editorApp = document.getElementById("editorApp");
+        const passwordGate = document.getElementById("passwordGate");
+        const unlockForm = document.getElementById("unlockForm");
+        const unlockPasswordInput = document.getElementById("unlockPassword");
+        const unlockError = document.getElementById("unlockError");
 
         let saving = false;
 
@@ -429,16 +574,40 @@ export function renderHTML(noteID: string, content: string): string {
         }
 
         function autoSave() {
-            if (saving || textarea.value === lastSaved) return;
+            const pendingPasswordChange = protectedNote && newPasswordInput.value.length > 0;
+            if (saving || (textarea.value === lastSaved && !pendingPasswordChange)) return;
+
+            const isNewNote = !currentNoteId;
+            const passwordForSave = protectedNote
+                ? currentPassword
+                : (isNewNote && protectCheckbox.checked ? createPasswordInput.value : '');
+            const requestedNewPassword = pendingPasswordChange ? newPasswordInput.value : '';
+
+            if (isNewNote && protectCheckbox.checked && passwordForSave.length < 8) {
+                setStatus('Choose a password with at least 8 characters', 'error');
+                return;
+            }
+            if (protectedNote && !passwordForSave) {
+                setStatus('Unlock this note before saving', 'error');
+                return;
+            }
+            if (requestedNewPassword && requestedNewPassword.length < 8) {
+                setStatus('New password must be at least 8 characters', 'error');
+                return;
+            }
+
             saving = true;
             setStatus('Saving...', 'saving');
 
             const contentToSave = textarea.value;
             const saveUrl = currentNoteId ? appBase + 'noteid/' + currentNoteId : appBase;
+            const payload = { noteId: currentNoteId, content: contentToSave };
+            if (passwordForSave) payload.password = passwordForSave;
+            if (requestedNewPassword) payload.newPassword = requestedNewPassword;
             fetch(saveUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ noteId: currentNoteId, content: contentToSave })
+                body: JSON.stringify(payload)
             })
             .then(function(response) {
                 if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + response.statusText);
@@ -447,6 +616,18 @@ export function renderHTML(noteID: string, content: string): string {
             .then(function(data) {
                 if (data.success) {
                     lastSaved = contentToSave;
+                    if (isNewNote) {
+                        passwordSetup.style.display = 'none';
+                        if (data.passwordProtected) {
+                            protectedNote = true;
+                            currentPassword = passwordForSave;
+                            changePasswordPanel.style.display = 'flex';
+                            createPasswordInput.value = '';
+                        }
+                    } else if (protectedNote && requestedNewPassword) {
+                        currentPassword = requestedNewPassword;
+                        newPasswordInput.value = '';
+                    }
                     currentNoteId = data.noteId;
 
                     var newPath = appBase + 'noteid/' + data.noteId;
@@ -471,6 +652,48 @@ export function renderHTML(noteID: string, content: string): string {
                 saving = false;
             });
         }
+
+        if (protectCheckbox) {
+            protectCheckbox.addEventListener('change', function() {
+                createPasswordInput.style.display = this.checked ? 'inline-block' : 'none';
+                if (!this.checked) createPasswordInput.value = '';
+            });
+        }
+
+        unlockForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            unlockError.textContent = '';
+            const password = unlockPasswordInput.value;
+            const unlockUrl = appBase + 'noteid/' + currentNoteId;
+            fetch(unlockUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'unlock', noteId: currentNoteId, password: password })
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    if (!response.ok) throw new Error(data.error || 'Could not unlock note');
+                    return data;
+                });
+            })
+            .then(function(data) {
+                protectedNote = true;
+                currentPassword = password;
+                lastSaved = data.content;
+                textarea.value = data.content;
+                printableEl.textContent = data.content;
+                updateCharCount();
+                passwordGate.style.display = 'none';
+                editorApp.style.display = 'flex';
+                changePasswordPanel.style.display = 'flex';
+                unlockPasswordInput.value = '';
+                textarea.focus();
+            })
+            .catch(function(error) {
+                unlockError.textContent = error.message || 'Incorrect password';
+                unlockPasswordInput.select();
+            });
+        });
 
         setInterval(autoSave, 1000);
 
@@ -532,7 +755,8 @@ export function renderHTML(noteID: string, content: string): string {
             });
         }
 
-        textarea.focus();
+        if (${JSON.stringify(locked)}) unlockPasswordInput.focus();
+        else if (!${JSON.stringify(consumed)}) textarea.focus();
     </script>
 </body>
 </html>`;

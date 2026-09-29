@@ -1,6 +1,9 @@
 name: Deploy Vercel
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions: {}
@@ -18,6 +21,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Set app version
+        env:
+          APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: npm run version:write
       - run: npm run typecheck
       - run: npm test
 
@@ -37,6 +44,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Set app version
+        env:
+          APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: npm run version:write
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "version:write": "node scripts/write-version.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
