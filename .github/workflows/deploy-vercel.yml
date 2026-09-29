@@ -50,11 +50,27 @@ jobs:
         run: npm run version:write
       - name: Deploy Vercel Preview
         if: github.event_name == 'workflow_dispatch'
+        id: deploy-preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx --yes vercel@60.1.3 --target preview --yes
+        run: |
+          PREVIEW_URL="$(npx --yes vercel@60.1.3 --target preview --yes)"
+          if [[ ! "$PREVIEW_URL" =~ ^https:// ]]; then
+            printf '%s\n' 'Vercel CLI did not return a Preview URL.' >&2
+            exit 1
+          fi
+          printf 'url=%s\n' "$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          printf 'Preview URL: %s\n' "$PREVIEW_URL"
+      - name: Smoke-test password-protected note with vercel curl
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PREVIEW_URL: ${{ steps.deploy-preview.outputs.url }}
+        run: node scripts/smoke-vercel-preview.mjs
       - name: Deploy Vercel Production
         if: github.event_name == 'push'
         env:

@@ -118,7 +118,7 @@ Pushing a `v*` tag (for example, `v0.3.1`) deploys to the production Worker. Man
 
 ### Deploy Vercel (`deploy-vercel.yml`)
 
-Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview` and returns a Vercel Preview URL. Preview reads the `KV_REST_API_URL` and `KV_REST_API_TOKEN` values configured in the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
+Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview` and runs a protected-note smoke test using `vercel curl`. Preview reads the `KV_REST_API_URL` and `KV_REST_API_TOKEN` values configured in the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
 
 **Required secrets:**
 
