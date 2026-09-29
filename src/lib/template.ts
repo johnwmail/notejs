@@ -100,27 +100,24 @@ export function renderHTML(
             white-space: nowrap;
         }
 
+        .brand-link {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .brand-link:hover {
+            color: var(--blue-600);
+        }
+
         .header h1 .logo-icon {
             color: var(--blue-600);
         }
 
-        .version-badge {
-            display: inline-flex;
-            align-items: center;
+        .version-footer {
             font-size: 11px;
             color: var(--text-muted);
             font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
-            border: 1px solid var(--border);
-            background: var(--white);
-            padding: 2px 6px;
-            border-radius: 999px;
             white-space: nowrap;
-            text-decoration: none;
-        }
-
-        .version-badge:hover {
-            color: var(--blue-600);
-            border-color: var(--blue-600);
         }
 
         .note-id {
@@ -339,6 +336,9 @@ export function renderHTML(
             color: var(--text-muted);
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         #printable {
@@ -376,10 +376,6 @@ export function renderHTML(
 
             .header h1 {
                 font-size: 17px;
-            }
-
-            .version-badge {
-                display: none;
             }
 
             .note-id {
@@ -482,8 +478,7 @@ export function renderHTML(
     <div class="container" id="editorApp" style="display:${editorDisplay}">
         <div class="header">
             <div class="header-left">
-                <h1><span class="logo-icon">✎</span> Notejs</h1>
-                <a class="version-badge" href="https://github.com/johnwmail/notejs" target="_blank" rel="noopener noreferrer" title="View Notejs on GitHub">${escapeHTMLServer(APP_VERSION)}</a>
+                <h1><a class="brand-link" href="https://github.com/johnwmail/notejs" target="_blank" rel="noopener noreferrer" title="View Notejs on GitHub"><span class="logo-icon">✎</span> Notejs</a></h1>
                 <span class="note-id" id="noteInfo">${escapedNoteID}</span>
             </div>
             <div class="controls">
@@ -527,7 +522,7 @@ export function renderHTML(
                 <span class="status-dot ready" id="statusDot"></span>
                 <span id="statusText">Ready</span>
             </div>
-            <div class="status-right" id="charCount"></div>
+            <div class="status-right"><span id="charCount"></span><span class="version-footer">${escapeHTMLServer(APP_VERSION)}</span></div>
         </div>
     </div>
 
