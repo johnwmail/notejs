@@ -113,7 +113,13 @@ describe("renderHTML", () => {
       passwordProtected: true,
       locked: true,
     });
-    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    const scriptStart = html.indexOf("<script>");
+    const scriptContentStart = scriptStart + "<script>".length;
+    const scriptEnd = html.indexOf("</script>", scriptContentStart);
+    const script =
+      scriptStart >= 0 && scriptEnd >= 0
+        ? html.slice(scriptContentStart, scriptEnd)
+        : undefined;
     expect(script).toBeDefined();
     expect(() => new Function(script!)).not.toThrow();
   });
