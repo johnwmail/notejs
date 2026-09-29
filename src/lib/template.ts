@@ -126,10 +126,17 @@ export function renderHTML(
             font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
             background: var(--blue-50);
             padding: 2px 8px;
+            border: 1px solid transparent;
             border-radius: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .note-id:hover {
+            color: var(--blue-600);
+            border-color: var(--blue-600);
         }
 
         .note-id:empty {
@@ -379,7 +386,9 @@ export function renderHTML(
             }
 
             .note-id {
-                display: none;
+                font-size: 11px;
+                padding: 2px 6px;
+                max-width: 90px;
             }
 
             .controls {
@@ -479,7 +488,7 @@ export function renderHTML(
         <div class="header">
             <div class="header-left">
                 <h1><a class="brand-link" href="https://github.com/johnwmail/notejs" target="_blank" rel="noopener noreferrer" title="View Notejs on GitHub"><span class="logo-icon">✎</span> Notejs</a></h1>
-                <span class="note-id" id="noteInfo">${escapedNoteID}</span>
+                <button class="note-id" id="noteInfo" onclick="copyNoteLink()" title="Copy link">${escapedNoteID}</button>
             </div>
             <div class="controls">
                 <button class="btn btn-primary" onclick="newNote()" title="New Note">
