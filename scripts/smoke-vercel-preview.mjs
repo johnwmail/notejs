@@ -21,36 +21,28 @@ const noteId = `CHECK${suffix}`;
 const password = randomBytes(24).toString("base64url");
 const content = "Vercel Preview protected-note smoke test";
 
-function vercelCurl(path, args) {
-  const result = spawnSync(
-    "npx",
-    [
-      "--yes",
-      "vercel@60.1.3",
-      "curl",
-      path,
-      "--deployment",
-      deploymentUrl,
-      "--protection-bypass",
-      protectionBypassSecret,
-      "--",
-      "--silent",
-      "--show-error",
-      "--write-out",
-      "\n%{http_code}",
-      ...args,
-    ],
-    { encoding: "utf8", timeout: 60_000 }
-  );
+function curl(path, args) {
+  const result = spawnSync("curl", [
+    "--silent",
+    "--show-error",
+    "--max-time",
+    "30",
+    "--write-out",
+    "\n%{http_code}",
+    "--header",
+    `x-vercel-protection-bypass: ${protectionBypassSecret}`,
+    ...args,
+    `${deploymentUrl}${path}`,
+  ], { encoding: "utf8", timeout: 60_000 });
 
   if (result.error || result.status !== 0) {
-    throw new Error(`vercel curl failed for ${path}: ${result.stderr || result.error}`);
+    throw new Error(`curl failed for ${path}: ${result.stderr || result.error}`);
   }
 
   const output = result.stdout.trimEnd();
   const separator = output.lastIndexOf("\n");
   if (separator < 0) {
-    throw new Error(`vercel curl returned no HTTP status for ${path}`);
+    throw new Error(`curl returned no HTTP status for ${path}`);
   }
   return {
     body: output.slice(0, separator),
@@ -58,7 +50,7 @@ function vercelCurl(path, args) {
   };
 }
 
-const created = vercelCurl("/", [
+const created = curl("/", [
   "--request",
   "POST",
   "--header",
@@ -70,7 +62,7 @@ if (created.status !== 200) {
   throw new Error(`protected-note creation returned HTTP ${created.status}`);
 }
 
-const wrongPassword = vercelCurl(`/noteid/${noteId}`, [
+const wrongPassword = curl(`/noteid/${noteId}`, [
   "--header",
   "X-Note-Password: wrong-smoke-password",
 ]);
@@ -78,7 +70,7 @@ if (wrongPassword.status !== 401) {
   throw new Error(`wrong password returned HTTP ${wrongPassword.status}, expected 401`);
 }
 
-const firstRead = vercelCurl(`/noteid/${noteId}`, [
+const firstRead = curl(`/noteid/${noteId}`, [
   "--header",
   `X-Note-Password: ${password}`,
 ]);
@@ -86,7 +78,7 @@ if (firstRead.status !== 200 || !firstRead.body.trimEnd().endsWith(content)) {
   throw new Error(`correct password read failed with HTTP ${firstRead.status}`);
 }
 
-const secondRead = vercelCurl(`/noteid/${noteId}`, [
+const secondRead = curl(`/noteid/${noteId}`, [
   "--header",
   `X-Note-Password: ${password}`,
 ]);
@@ -94,4 +86,4 @@ if (secondRead.status !== 404 && secondRead.status !== 410) {
   throw new Error(`second read returned HTTP ${secondRead.status}, expected 404 or 410`);
 }
 
-console.log("Vercel Preview password-protected note smoke test passed.");
+console.log("Vercel Preview curl password-protection smoke test passed.");

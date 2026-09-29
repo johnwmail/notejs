@@ -118,7 +118,7 @@ Pushing a `v*` tag (for example, `v0.3.1`) deploys to the production Worker. Man
 
 ### Deploy Vercel (`deploy-vercel.yml`)
 
-Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview`. When the GitHub Actions secret `VERCEL_AUTOMATION_BYPASS_SECRET` is configured, the workflow uses `vercel curl` to smoke-test password-protected note creation, read-once, and burn behavior. Preview reads `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
+Pushing a `v*` tag deploys to Vercel Production. Manual `workflow_dispatch` deploys with `--target preview`. When the GitHub Actions secret `VERCEL_AUTOMATION_BYPASS_SECRET` is configured, the workflow uses `curl` with Vercel's protection-bypass header to smoke-test password-protected note creation, read-once, and burn behavior. Preview reads `KV_REST_API_URL` and `KV_REST_API_TOKEN` from the Vercel project's Preview environment; point these at a separate staging Redis database. Both paths run typecheck and tests first. Pushing a matching tag triggers both Cloudflare and Vercel production deployments.
 
 **Required secrets:**
 
