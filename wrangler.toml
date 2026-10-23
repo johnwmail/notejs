@@ -3,6 +3,10 @@ main = "src/workers.ts"
 compatibility_date = "2024-09-09"
 compatibility_flags = ["nodejs_compat"]
 
+# Weekly reset: every Monday at 00:00 UTC (Monday 08:00 Hong Kong time).
+[triggers]
+crons = ["0 0 * * 1"]
+
 [[kv_namespaces]]
 binding = "KV"
 id = "local-dev"
@@ -10,9 +14,11 @@ preview_id = "local-dev"
 
 [vars]
 TTL = "604800"
+PURGE_ENABLED = "true"
 
 [previews.vars]
 TTL = "604800"
+PURGE_ENABLED = "true"
 
 [[previews.kv_namespaces]]
 binding = "KV"

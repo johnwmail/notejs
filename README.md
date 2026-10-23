@@ -10,6 +10,7 @@ A lightweight, serverless note-taking web app written in TypeScript. Create, edi
 - **Password-Protected Notes**: Optional per-note password encryption; a protected note is deleted after its first successful read
 - **CLI Help and Version**: `curl` on the app root prints usage examples and the build version; the browser header displays the same version as a link to the GitHub repository
 - **Favicon**: `/favicon.ico` serves the app icon
+- **Weekly Reset**: A Cloudflare Cron Trigger clears every note from KV every Monday at 00:00 UTC
 - **Multi-Deployment**: Cloudflare Workers or Vercel Edge
 - **Zero Dependencies**: No npm runtime deps — KV via native bindings (Cloudflare) or REST fetch (Vercel)
 - **XSS Protection**: User content is HTML-escaped
@@ -42,7 +43,7 @@ Open http://localhost:8787.
 ### Step 1: Create a KV namespace
 
 ```bash
-npx wrangler kv:namespace create "KV"
+npx wrangler kv namespace create "KV"
 ```
 
 ### Step 2: Add the namespace ID to `wrangler.toml`
@@ -237,6 +238,8 @@ curl -H "X-Note-Password: $NOTE_PASSWORD" \
 │       ├── crypto.test.ts  # Protected-note cryptography tests
 │       ├── storage.ts      # Storage interface + KV / Vercel KV backends
 │       ├── storage.test.ts # Storage unit tests
+│       ├── purge.ts        # Scheduled KV purge (Cloudflare Cron)
+│       ├── purge.test.ts   # Purge unit tests
 │       ├── utils.ts        # Note ID generation/validation, HTML escaping, ClientIP
 │       └── types.ts        # TypeScript type definitions
 ├── wrangler.toml           # Cloudflare Workers configuration
@@ -266,6 +269,30 @@ Note IDs use a WORDnn format — a random dictionary word (3–5 uppercase lette
 ### Storage
 
 Both platforms use persistent KV storage with 7-day TTL. Cloudflare Workers uses native **Workers KV** via `env.KV`. Vercel Edge uses **Upstash Redis** via REST API (`KV_REST_API_URL` / `KV_REST_API_TOKEN`). Both implement the same `Storage` interface.
+
+### Scheduled Purge (Cloudflare only)
+
+`wrangler.toml` registers a Cron Trigger that wipes the whole KV namespace:
+
+```toml
+[triggers]
+crons = ["0 0 * * 1"]   # every Monday 00:00 UTC
+```
+
+The scheduled handler calls `purgeAllNotes()` (`src/lib/purge.ts`), which lists and deletes keys using only the KV binding, so no API token or account credentials are stored in the Worker.
+
+- Each run is capped at 900 KV operations (`DEFAULT_MAX_OPERATIONS`), because Workers KV allows roughly 1,000 operations per invocation. A weekly reset therefore clears about 900 notes per run.
+- Keys are re-listed from the start after each page instead of following a cursor, since deleting keys invalidates cursors.
+- Deletes are eventually consistent; a key can still be readable for up to ~60 seconds after deletion.
+- Set `PURGE_ENABLED = "false"` in `[vars]` to keep the trigger registered but skip the purge.
+- Test locally:
+
+```bash
+npx wrangler dev --test-scheduled
+curl "http://localhost:8787/__scheduled?cron=0+0+*+*+1"
+```
+
+Vercel has no Cron Trigger here; the purge is Cloudflare-specific.
 
 ## Testing
 
